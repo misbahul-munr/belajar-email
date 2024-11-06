@@ -1,0 +1,23 @@
+{
+    "domain": {
+        "action": "getDomainList"
+    },
+    "mailbox": {
+        "action": "getMessages",
+        "login": null,
+        "domain": null
+    },
+    "messages": {
+        "action": "readMessage",
+        "login": null,
+        "domain": null,
+        "id": null
+    },
+    "download_message": {
+        "action": "download",
+        "login": null,
+        "domain": null,
+        "id": null,
+        "file": null
+    }
+}
