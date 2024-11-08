@@ -15,6 +15,7 @@ class OnesecMail:
             os.path.dirname(
                 os.path.realpath(__file__)
             ), 'param_request.json')
+        self.__seccons = NewType("seccons", int)
 
     @property
     def random_username(self) -> str:
@@ -36,25 +37,61 @@ class OnesecMail:
         try :
             with open(self.__path_json_param,mode='r') as file :
                 return json.load(file)
-        except (FileNotFoundError,json.JSONDecodeError):
-            raise Exception(" >> json file not found ! ")
+        except (FileNotFoundError,json.JSONDecodeError) as e :
+            raise Exception(" >> json file not found ! ") from e
 
-    # send to api action value parameter
-    async def set_connection(self,actions,**kwargs) -> Optional[Dict]:
-        #add action parameter to kwargs
-        kwargs.update(action = actions)
-        #async request with httpx
+    async def generate_mail(self) -> Optional[str]:
+        domain_req = self.getsample_request.get('domain')
+        con_domain = await self.set_connection(**domain_req)
+        return '{}@{}'.format(self.random_username,random.choice(con_domain)) 
+
+    async def get_mailBox(self,address:str) -> list[dict]:
+        mailbox_req = self.getsample_request.get('mailbox')
+        username,domain = address.split('@')
+        mailbox_req.update({'login':username,'domain':domain})
+        con_mailbox = await self.set_connection(**mailbox_req)
+        return con_mailbox
+
+    async def get_latest_message(self,address:str) -> Optional[str]:
+        mssg_req =  self.getsample_request.get('messages')
+        mailbox = await self.get_mailBox(address)
+        try:
+            id_ = mailbox[0].get('id')
+        except IndexError:
+            return None
+        username,domain = address.split('@')
+        mssg_req.update({'login':username,'domain':domain,'id':id_})
+        con_latest_message = await self.set_connection(**mssg_req)
+        output = con_latest_message.get('textBody')
+        return None if output is None else output.strip() if output.strip() else '-'
+    
+    async def wait_newMessage(self,address:str,time_out:int=60,filter:str=None):
+        """
+            Waits for a new message within a specified timeout period.
+
+            Parameters:
+            address (str): The email address to check for messages.
+            time_out (int): The timeout value in seconds (seccons). Default is 60 seconds.
+            filter (str, optional): A filter string to match specific messages.
+
+            Returns:
+            None
+        """
+        return time_out
+
+    async def set_connection(self,**kwargs) -> dict:
         async with httpx.AsyncClient() as client:
-            # request api onesecmail
             r = await client.get(self.__api_address,params=kwargs) 
-            if r.status_code == 200 :
-                return await r.json()
-            else :
-                print(r.status_code)
-                return None
+            r.raise_for_status() # bad requests if status code not 2xx
+            return r.json() 
 
 
 if __name__ == "__main__":
     app = OnesecMail()
+    address = "1m4rsmzj9w@1secmail.net"
+    print(address)
+    x = asyncio.run(app.wait_newMessage('a',))
+    print(x)
+    # print(app.wait_newMessage('a',10))
 
 
