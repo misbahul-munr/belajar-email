@@ -5,7 +5,7 @@ import random
 import string
 import json
 from typing import *
-
+from tqdm import tqdm
 
 class OnesecMail:
 
@@ -52,7 +52,7 @@ class OnesecMail:
         con_mailbox = await self.set_connection(**mailbox_req)
         return con_mailbox
 
-    async def get_latest_message(self,address:str) -> Optional[str]:
+    async def get_latest_message(self,address:str,get_desc=False) -> Union[None,dict,str]:
         mssg_req =  self.getsample_request.get('messages')
         mailbox = await self.get_mailBox(address)
         try:
@@ -63,21 +63,54 @@ class OnesecMail:
         mssg_req.update({'login':username,'domain':domain,'id':id_})
         con_latest_message = await self.set_connection(**mssg_req)
         output = con_latest_message.get('textBody')
-        return None if output is None else output.strip() if output.strip() else '-'
+        if not get_desc :
+            return None if output is None else output.strip() if output.strip() else '-'
+        else :
+            return {key:item for key,item in con_latest_message.items()}
     
-    async def wait_newMessage(self,address:str,time_out:int=60,filter:str=None):
+    async def wait_newMessage(self,address:str,time_out:int=60,filters:str=None):
         """
             Waits for a new message within a specified timeout period.
 
             Parameters:
             address (str): The email address to check for messages.
             time_out (int): The timeout value in seconds (seccons). Default is 60 seconds.
-            filter (str, optional): A filter string to match specific messages.
+            filters (str, optional): A filter string to match specific messages.
 
             Returns:
             None
         """
-        return time_out
+
+        all_inbox = await self.get_mailBox(address)
+        old_all_id = list(map(lambda x:x['id'],all_inbox))
+        secconds = 0
+
+        async def update_message() :
+            await asyncio.sleep(3)
+            return list(filter(lambda x:x['id'] not in old_all_id, await self.get_mailBox(address)))
+
+        with tqdm(total=time_out,desc="waiting new message",unit='sec',colour='green') as pbar :
+            while time_out > secconds :
+                try:
+                    if await update_message():
+                        if filters is None:
+                            pbar.close()
+                            return await self.get_latest_message(address)
+                        else :
+                            dict_message = await self.get_latest_message(address,True)
+                            if any(filters.lower() in str(value).lower() for value in dict_message.values()):
+                                pbar.close()
+                                return await self.get_latest_message(address)
+
+                except httpx.HTTPStatusError :
+                    pass
+
+                secconds += 4
+                pbar.update(4)
+                await asyncio.sleep(1)
+
+            pbar.close()
+            return None
 
     async def set_connection(self,**kwargs) -> dict:
         async with httpx.AsyncClient() as client:
@@ -86,12 +119,10 @@ class OnesecMail:
             return r.json() 
 
 
-if __name__ == "__main__":
-    app = OnesecMail()
-    address = "1m4rsmzj9w@1secmail.net"
-    print(address)
-    x = asyncio.run(app.wait_newMessage('a',))
-    print(x)
-    # print(app.wait_newMessage('a',10))
-
+# if __name__ == "__main__":
+    # app = OnesecMail()
+    # address = "1m4rsmzj9w@1secmail.net"
+    # print(address)
+    # x = asyncio.run(app.wait_newMessage(address,60,'github'))
+    # print(x)
 
