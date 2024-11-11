@@ -1,0 +1,2 @@
+from .onesecmail import OnesecMail
+

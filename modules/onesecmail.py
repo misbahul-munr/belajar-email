@@ -110,19 +110,10 @@ class OnesecMail:
                 await asyncio.sleep(1)
 
             pbar.close()
-            return None
 
-    async def set_connection(self,**kwargs) -> dict:
+    async def set_connection(self,downloads=False,**kwargs) -> dict:
         async with httpx.AsyncClient() as client:
             r = await client.get(self.__api_address,params=kwargs) 
             r.raise_for_status() # bad requests if status code not 2xx
             return r.json() 
-
-
-# if __name__ == "__main__":
-    # app = OnesecMail()
-    # address = "1m4rsmzj9w@1secmail.net"
-    # print(address)
-    # x = asyncio.run(app.wait_newMessage(address,60,'github'))
-    # print(x)
 
