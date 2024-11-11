@@ -158,18 +158,18 @@ class Mailtm :
 
     async def wait_new_message(self,address:str,filters:str|None = None,time_out:int=60) -> Optional[str]:
         """ 
-        Waiting a latest once message with or not filters the text message
+        Waiting for the latest message, with or without filtering the text message  
 
         Parameters :
         address (str): username@domain for your mail
         filters (str): filters any pattern text message
-        time_out (int): secconds time wait for message default is 60 sec
+        time_out (int): seconds time wait for message default is 60 sec
 
         Returns:
         None
         """
         old_id_inbox = list(map(lambda x : x['id'] ,await self.get_inbox(address)))
-        secconds = 0
+        seconds = 0
 
         async def new_id_inbox():
             await asyncio.sleep(3)
@@ -190,7 +190,7 @@ class Mailtm :
             return False
 
         with tqdm(desc="Waiting new Message ",total=time_out,colour='red',unit='sec') as pbar:
-            while secconds <= time_out :
+            while seconds <= time_out :
                 try:
                     if await new_id_inbox() :
                         if filters is None :
@@ -207,7 +207,7 @@ class Mailtm :
                     pass
 
                 await asyncio.sleep(1)
-                secconds+=4
+                seconds+=4
                 pbar.update(4)
 
             pbar.close()
